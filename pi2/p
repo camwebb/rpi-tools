@@ -1,10 +1,5 @@
 #!/bin/sh
 
-function fread () {
-    pwd | sed "s/./& /g" | gawk '{print toupper($0)}' | flite
-}
-
-
 if [ $# -eq 0 ]
 then
     for i in `gawk 'BEGIN{FS="|"}{print $1}' p.data`
@@ -12,6 +7,7 @@ then
 	echo $i | gawk '{print toupper($0)}' | flite
     done
 else
+    echo $1 | flite
     exec `gawk -v a=$1 'BEGIN{FS="|"} $1 == a {print $2}' p.data`
 fi
 
