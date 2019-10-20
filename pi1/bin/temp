@@ -1,9 +1,22 @@
 #!/bin/sh
 
-T=`date +"%Y-%m-%d_%H:%M"`
+source ~/.passwd.sh
 
-t=`cat /sys/bus/w1/devices/28-01143cf088aa/w1_slave | grep "t=" | gawk '{gsub(/t=/,"",$10); printf "%5.1f F\n", (($10/1000)*(9/5))+32 }'`
+T=`date +"%Y-%m-%d|%H:%M"`
 
-echo $T $t
+t=`cat /sys/bus/w1/devices/28-01143cf088aa/w1_slave | grep "t=" | gawk '{gsub(/t=/,"",$10); printf "%.1f", (($10/1000)*(9/5))+32 }'`
+
+echo $T"|"$t"|F"
+
+D=`date -u +"%Y-%m-%d %H:%M:%S"`
+  
+curl -G -v \
+  --data-urlencode ID=KAKNORTH44 \
+  --data-urlencode PASSWORD=$WUP \
+  --data-urlencode dateutc="$D" \
+  --data-urlencode action=updateraw \
+  --data-urlencode tempf=$t \
+  --data-urlencode softwaretype=manual \
+  https://weatherstation.wunderground.com/weatherstation/updateweatherstation.php
 
 
