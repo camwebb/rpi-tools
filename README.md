@@ -16,9 +16,10 @@ or vlc. Am working with mpg123, cmus, mocp
 
 playing m4a without mplayer? mocp and cmus will do it. Both need to be “detached”. cmus via screen. Mocp:
 
-echo "" | mocp Moonrise-fFvcLTg6acA.m4a
+```
+echo "" | mocp foo.m4a
 mocp --exit # to kill
-
+```
 
 
 
