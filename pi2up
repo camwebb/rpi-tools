@@ -1,0 +1,5 @@
+#!/bin/sh
+
+rsync -avP pi2/ alarm@192.168.1.10:../alarm/
+
+
