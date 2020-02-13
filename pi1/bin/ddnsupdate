@@ -1,0 +1,88 @@
+#!/bin/sh
+
+cd "$(dirname "$0")"
+source ../.passwd.sh
+
+DATE=`date +"%Y-%m-%d_%H:%M:%S_%Z"`
+LOG="../ddnsupdate.log"
+
+# 1. Find the DH IP record
+
+UUID=`uuidgen`
+OLDIP=`curl -G -s \
+  --data-urlencode "key=$DHKEY" \
+  --data-urlencode "unique_id=$UUID" \
+  --data-urlencode "cmd=dns-list_records" \
+  https://api.dreamhost.com/ | 
+  gawk '/wx\.camwebb\.info/ {print $5}'`
+
+if [ `echo $OLDIP | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/XXX/g'` \
+         != "XXX" ]
+then
+    echo $DATE": Error: could not get old IP from DH" >> $LOG
+    exit 1
+fi
+
+# 2. Get current IP
+
+NOWIP=`curl -s http://checkip.dyndns.com/ | sed -E 's/^[^0-9]+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)[^0-9]+$/\1/g'`
+
+if [ `echo $NOWIP | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/XXX/g'` \
+         != "XXX" ]
+then
+    echo $DATE": Error: could not get current IP" >> $LOG
+    exit 1
+fi
+
+echo $DATE": Old     IP: "$OLDIP >> $LOG
+echo $DATE": Current IP: "$NOWIP >> $LOG
+
+if [ $OLDIP = $NOWIP ]
+then
+    echo $DATE": IP is unchanged. Exiting" >> $LOG 
+    exit 0
+fi
+
+# 3. Delete the existing IP at DH
+
+UUID=`uuidgen`
+RMSUC=`curl -G -s \
+  --data-urlencode "key=$DHKEY" \
+  --data-urlencode "unique_id=$UUID" \
+  --data-urlencode "cmd=dns-remove_record" \
+  --data-urlencode "record=wx.camwebb.info" \
+  --data-urlencode "type=A" \
+  --data-urlencode "value=$OLDIP" \
+  https://api.dreamhost.com/ | \
+  grep -c success`
+
+if [ $RMSUC -ne 1 ]
+then
+    echo $DATE": Error: could not delete IP at DH" >> $LOG 
+    exit 1
+else
+    echo $DATE": Success: deleted IP at DH" >> $LOG 
+fi
+
+# 4. Insert the new IP at DH
+
+UUID=`uuidgen`
+ADDSUC=`curl -G -s \
+  --data-urlencode "key=$DHKEY" \
+  --data-urlencode "unique_id=$UUID" \
+  --data-urlencode "cmd=dns-add_record" \
+  --data-urlencode "record=wx.camwebb.info" \
+  --data-urlencode "type=A" \
+  --data-urlencode "value=$NOWIP" \
+  --data-urlencode "comment=Auto_$DATE" \
+  https://api.dreamhost.com/ | \
+  grep -c success`
+
+if [ $ADDSUC -ne 1 ]
+then
+    echo $DATE": Error: could not add new IP at DH" >> $LOG 
+    exit 1
+else
+    echo $DATE": Success: add $NOWIP at DH" >> $LOG
+    exit 0
+fi
